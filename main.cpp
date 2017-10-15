@@ -15,7 +15,7 @@
 #include <fstream>
 #include <numeric>
 #include <ctime>
-#include <input.h>
+#include "input.h"
 
 class lattice {
     public: std::vector< std::vector<int>> spins;
@@ -72,8 +72,8 @@ class lattice {
 
     void eval_magnetization(int x, int y){
         magnetization = 0;
-        for(int i = 1; i < x - 1; i++) {
-            for(int j = 1; j < x - 1; j++) {
+        for(int i = 0; i < x - 1; i++) {
+            for(int j = 0; j < x - 1; j++) {
                 magnetization += spins[i][j];
             }
         }
@@ -89,16 +89,15 @@ int main() {
     txtoutput.open ("snapshots_spins_up.txt");
     int num_runs = 1;
     int step = 0;
+    int size = 10;
+    double beta = 0.25;
+    int num_steps = 500;
+    lattice grid;
 
 
     for(int run=0; run < num_runs; run++) {
-        lattice grid;
-        int size = 10;
         grid.init(size, size);
-
         std::vector<double> m_sqrd_avg_arr;
-        double beta = 0.25;
-        int num_steps = 500;
         srand(run);
 
         for (int i = 0; i < num_steps; i++) {
@@ -107,31 +106,34 @@ int main() {
 
             grid.eval_energy(size, size);
             int E_before = grid.energy;
+
             if (grid.spins[rnd_row][rnd_col] == -1) {
                 grid.spins[rnd_row][rnd_col] = 1;
+
                 grid.eval_energy(size, size);
                 if (exp(-1 * beta * (grid.energy - E_before)) <
                     static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) {
                     grid.spins[rnd_row][rnd_col] = -1;
-//                    std::cout << "Reject" << std::endl;
+                    //std::cout << "Reject" << std::endl;
                     //Reject
                 }
-//                std::cout << "Accept" << std::endl;
+                //std::cout << "Accept" << std::endl;
                 //Accept
-                step = step+1;
+
+                step++;
             } else {
                 grid.spins[rnd_row][rnd_col] = -1;
                 grid.eval_energy(size, size);
                 if (exp(-1 * beta * (grid.energy - E_before)) <
                     static_cast <float> (rand()) / static_cast <float> (RAND_MAX)) {
                     grid.spins[rnd_row][rnd_col] = 1;
-//                    std::cout << "Reject" << std::endl;
+                    //std::cout << "Reject" << std::endl;
                     //Reject
                 }
-//                std::cout << "Accept" << std::endl;
+                //std::cout << "Accept" << std::endl;
                 //Accept
 
-                step = step+1;
+                step++;
             }
             grid.eval_energy(size, size);
             grid.eval_magnetization(size, size);
