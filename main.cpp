@@ -227,6 +227,7 @@ vector <int> identify_config(vector<vector<int>> a) {
 }
 
 int main() {
+    srand(time(NULL));
     std::ifstream f;
     f.open("../input.txt");
     InputClass input;
@@ -234,24 +235,22 @@ int main() {
     double beta=input.toDouble(input.GetVariable("beta"));
     int Lx=input.toInteger(input.GetVariable("Lx"));
     int Ly=input.toInteger(input.GetVariable("Ly"));
-    int size = 3;
-    int num_runs = 500;
+    int size = 15;
+    int num_runs = 5;
     vector <double> betas;
     vector <double> coupling_const;
+    coupling_const.push_back(1);
     betas.push_back(0.25);
-    betas.push_back(0.5);
-    betas.push_back(5);
+    for(int b = 0; b < 400; b++){
+        betas.push_back(static_cast<double>((rand() % 1000))/ static_cast<double>(1000));
+    }
     int beta_steps = 100;
-    coupling_const.push_back(1);
-    coupling_const.push_back(1);
-    coupling_const.push_back(1);
     lattice grid;
     lattice cg_single;
     lattice cg_double;
     std::ofstream txtoutput;
-    txtoutput.open ("exper_512_configs.txt");
+    txtoutput.open ("critical_temp.txt");
 
-    srand(time(NULL));
     // run = 26265 with size 4, run=432 with size 3
     grid.init(size, size);
     print2DArray(grid.spins);
@@ -267,11 +266,9 @@ int main() {
     std::vector<double> m_sqrd_avg_arr_cg_double;
     grid.beta = betas[0];
     grid.J = coupling_const[0];
-    //for(int beta_iter = 0; beta_iter < beta_steps; beta_iter++) {//betas.size(); beta_iter++) {
-    //while(grid.const_count < 16 || grid.beta > 0){
-    for(int pm = 0; pm < 10000; pm++) {
-        //auto cur_beta = betas[beta_iter];
-        //auto cur_J = coupling_const[beta_iter];
+    for (double cur_beta : betas) {
+        grid.beta = cur_beta;
+//        auto cur_J = coupling_const[beta_iter];
         //std::cout << cur_beta << endl;
         //grid.beta = grid.beta - beta_iter*grid.beta/100;
         grid.init(size, size);
@@ -294,11 +291,11 @@ int main() {
                 //cg_single.init_existing(grid.course_grain(grid.spins));
                 //cg_double.init_existing(grid.course_grain(grid.course_grain(grid.spins)));
 
-                //grid.eval_magnetization();
+                grid.eval_magnetization();
                 //cg_single.eval_magnetization();
                 //cg_double.eval_magnetization();
 
-                //m_sqrd_avg_arr.push_back(grid.m_sqrd);
+                m_sqrd_avg_arr.push_back(grid.m_sqrd);
                 //m_sqrd_avg_arr_cg_single.push_back(cg_single.m_sqrd);
                 //m_sqrd_avg_arr_cg_double.push_back(cg_double.m_sqrd);
 
@@ -323,11 +320,11 @@ int main() {
                 //cg_single.init_existing(grid.course_grain(grid.spins));
                 //cg_double.init_existing(grid.course_grain(grid.course_grain(grid.spins)));
 
-                ///grid.eval_magnetization();
+                grid.eval_magnetization();
                 //cg_single.eval_magnetization();
                 //cg_double.eval_magnetization();
 
-                ///m_sqrd_avg_arr.push_back(grid.m_sqrd);
+                m_sqrd_avg_arr.push_back(grid.m_sqrd);
                 //m_sqrd_avg_arr_cg_single.push_back(cg_single.m_sqrd);
                 //m_sqrd_avg_arr_cg_double.push_back(cg_double.m_sqrd);
 
@@ -337,11 +334,8 @@ int main() {
 //                    return 0;
 //                }
             }
-            auto bin_repr = identify_config(grid.spins);
-            for (const auto &b : bin_repr) txtoutput << b;
-            txtoutput << endl;
-            ///double m_sqrd_avg =
-              ///      std::accumulate(m_sqrd_avg_arr.begin(), m_sqrd_avg_arr.end(), 0.000) / m_sqrd_avg_arr.size();
+            double m_sqrd_avg =
+                    std::accumulate(m_sqrd_avg_arr.begin(), m_sqrd_avg_arr.end(), 0.000) / m_sqrd_avg_arr.size();
             /*double m_sqrd_avg_cg_single =
                     std::accumulate(m_sqrd_avg_arr_cg_single.begin(),
                                     m_sqrd_avg_arr_cg_single.end(), 0.000) / m_sqrd_avg_arr_cg_single.size();
@@ -354,7 +348,8 @@ int main() {
             //std::cout << m_sqrd_avg_cg_single << std::endl;
             //std::cout << m_sqrd_avg_cg_double << std::endl;
 
-            //txtout_value(txtoutput, m_sqrd_avg);
+            txtout_value(txtoutput, m_sqrd_avg);
+            txtout_value(txtoutput, grid.beta);
             /*txtout_value(txtoutput, m_sqrd_avg_cg_single);
             txtout_value(txtoutput, m_sqrd_avg_cg_double);
              */
