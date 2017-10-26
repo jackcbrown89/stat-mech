@@ -14,9 +14,10 @@
 #include <numeric>
 #include <ctime>
 #include "input.h"
+#include "Communication.h"
 
 class lattice {
-    public: std::vector< std::vector<int>> spins;
+    public: std::vector< std::vector<int> > spins;
     public: int energy = 0;
     public: double magnetization = 0;
     public: double m_sqrd = 0;
@@ -25,6 +26,7 @@ class lattice {
     public: double J = 1.0;
     public: double beta = 0.25;
     public: int const_count = 0;
+    public: double T = 7.25e+23;
 
     void init (int x, int y) {
         spins.resize(y);
@@ -66,7 +68,7 @@ class lattice {
     }
 
     void init_rand_config (int x, int y) {
-        srand(time(NULL));
+        srand(13);
         spins.resize(y);
         for(int i = 0; i < y; i++){
             spins[i].resize(x);
@@ -215,7 +217,7 @@ void txtout_value(std::ofstream &txtout, double val) {
         txtout << val <<'\n';
 }
 
-vector <int> identify_config(vector<vector<int>> a) {
+vector <int> identify_config(vector<vector<int> > a) {
     vector <int> binary;
     for(int i = 0; i < a.size(); i++) {
         for(int j = 0; j < a.size(); j++) {
@@ -226,21 +228,23 @@ vector <int> identify_config(vector<vector<int>> a) {
     return binary;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     srand(time(NULL));
     std::ifstream f;
     f.open("../input.txt");
     InputClass input;
     input.Read(f);
+
     double beta=input.toDouble(input.GetVariable("beta"));
     int Lx=input.toInteger(input.GetVariable("Lx"));
     int Ly=input.toInteger(input.GetVariable("Ly"));
-    int size = 15;
+    int size = 20;
     int num_runs = 5;
+    double K = 1.381e-23;
     vector <double> betas;
     vector <double> coupling_const;
     coupling_const.push_back(1);
-    betas.push_back(0.25);
+    betas.push_back(0.1);
     for(int b = 0; b < 400; b++){
         betas.push_back(static_cast<double>((rand() % 1000))/ static_cast<double>(1000));
     }
@@ -249,11 +253,10 @@ int main() {
     lattice cg_single;
     lattice cg_double;
     std::ofstream txtoutput;
-    txtoutput.open ("critical_temp.txt");
+    txtoutput.open ("sim_ann_bs100_512_log.txt");
 
     // run = 26265 with size 4, run=432 with size 3
     grid.init(size, size);
-    print2DArray(grid.spins);
     vector < int > a_spins;
     vector < int > b_spins;
 
@@ -265,20 +268,32 @@ int main() {
     std::vector<double> m_sqrd_avg_arr_cg_single;
     std::vector<double> m_sqrd_avg_arr_cg_double;
     grid.beta = betas[0];
-    grid.J = coupling_const[0];
-    for (double cur_beta : betas) {
-        grid.beta = cur_beta;
-//        auto cur_J = coupling_const[beta_iter];
+    grid.J = pow(-1, rand() % 2)*coupling_const[0];
+    grid.init_rand_config(size, size);
+    print2DArray(grid.spins);
+    double dT = 250e20;
+    double T_init = grid.T;
+    //for (int beta_iter = 0; beta_iter < beta_steps; beta_iter++) {
+      while(exp(-1*grid.J*grid.beta)/exp(-1*coupling_const[0]*betas[0]) < 1.1 || grid.const_count < 20) {
+          double diff = exp(-1*grid.J*grid.beta)/exp(-1*coupling_const[0]*betas[0]);
+          //grid.beta = cur_beta;
+        //auto cur_J = coupling_const[beta_iter];
         //std::cout << cur_beta << endl;
-        //grid.beta = grid.beta - beta_iter*grid.beta/100;
-        grid.init(size, size);
+        if(grid.const_count >= 20) {
+            std::cout << diff << "hi" << endl;
+            grid.T = grid.T - dT;
+            grid.beta = 1/(K*(T_init/log(grid.T)));
+            //grid.J = grid.J*-1;
+            grid.eval_energy();
+            //std::cout << grid.beta << endl;
+            std::cout << grid.energy << endl;
+        }
 
-        //if (grid.beta > 0) {grid.beta = grid.beta - betas[0]/5;}
-        std::cout << grid.beta << endl;
+        //std::cout << grid.beta << endl;
         //grid.J = cur_J;
         for (int run = 0; run < num_runs; run++) {
             grid.eval_energy();
-            //txtout_value(txtoutput, grid.energy);
+            txtout_value(txtoutput, grid.energy);
 
             #pragma omp parallel for
             for (int s : a_spins) {
@@ -288,14 +303,19 @@ int main() {
                 int spin = grid.spins[i][j];
 
                 grid.spins[i][j] = grid.transition_prob_flip(spin, i, j);
+
                 //cg_single.init_existing(grid.course_grain(grid.spins));
                 //cg_double.init_existing(grid.course_grain(grid.course_grain(grid.spins)));
 
-                grid.eval_magnetization();
+                //grid.eval_magnetization();
                 //cg_single.eval_magnetization();
+                //txtout_value(txtoutput, abs(cg_single.magnetization));
+                //auto bin_repr = identify_config(cg_single.spins);
+                //for (const auto &b : bin_repr) txtoutput << b;
+                //txtoutput << endl;
                 //cg_double.eval_magnetization();
 
-                m_sqrd_avg_arr.push_back(grid.m_sqrd);
+                //m_sqrd_avg_arr.push_back(grid.m_sqrd);
                 //m_sqrd_avg_arr_cg_single.push_back(cg_single.m_sqrd);
                 //m_sqrd_avg_arr_cg_double.push_back(cg_double.m_sqrd);
 
@@ -320,11 +340,15 @@ int main() {
                 //cg_single.init_existing(grid.course_grain(grid.spins));
                 //cg_double.init_existing(grid.course_grain(grid.course_grain(grid.spins)));
 
-                grid.eval_magnetization();
+                //grid.eval_magnetization();
                 //cg_single.eval_magnetization();
+                //txtout_value(txtoutput, abs(cg_single.magnetization));
+                //auto bin_repr = identify_config(cg_single.spins);
+                //for (const auto &b : bin_repr) txtoutput << b;
+                //txtoutput << endl;
                 //cg_double.eval_magnetization();
 
-                m_sqrd_avg_arr.push_back(grid.m_sqrd);
+                //m_sqrd_avg_arr.push_back(grid.m_sqrd);
                 //m_sqrd_avg_arr_cg_single.push_back(cg_single.m_sqrd);
                 //m_sqrd_avg_arr_cg_double.push_back(cg_double.m_sqrd);
 
@@ -334,8 +358,9 @@ int main() {
 //                    return 0;
 //                }
             }
-            double m_sqrd_avg =
-                    std::accumulate(m_sqrd_avg_arr.begin(), m_sqrd_avg_arr.end(), 0.000) / m_sqrd_avg_arr.size();
+
+            ///double m_sqrd_avg =
+              ///      std::accumulate(m_sqrd_avg_arr.begin(), m_sqrd_avg_arr.end(), 0.000) / m_sqrd_avg_arr.size();
             /*double m_sqrd_avg_cg_single =
                     std::accumulate(m_sqrd_avg_arr_cg_single.begin(),
                                     m_sqrd_avg_arr_cg_single.end(), 0.000) / m_sqrd_avg_arr_cg_single.size();
@@ -348,19 +373,16 @@ int main() {
             //std::cout << m_sqrd_avg_cg_single << std::endl;
             //std::cout << m_sqrd_avg_cg_double << std::endl;
 
-            txtout_value(txtoutput, m_sqrd_avg);
-            txtout_value(txtoutput, grid.beta);
+            ///txtout_value(txtoutput, m_sqrd_avg);
+            ///txtout_value(txtoutput, grid.beta);
             /*txtout_value(txtoutput, m_sqrd_avg_cg_single);
             txtout_value(txtoutput, m_sqrd_avg_cg_double);
              */
         }
 
     }
-    print2DArray(grid.spins);
     txtoutput.close();
-    return 0;
     std::cout << "\nLocal Minimums:\t" << endl;
     print2DArray(grid.spins);
-    ///txtoutput.close();
     return 0;
 }

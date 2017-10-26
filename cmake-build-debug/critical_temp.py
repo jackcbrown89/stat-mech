@@ -14,10 +14,14 @@ f += open('snapshots/critical_temp_15.txt', 'r').readlines()
 # ar_sum = sum([np.exp(-1*int(x)) for x in f])
 m = [float(x) for x in f[::2]]
 betas = [float(x) for x in f[1::2]]
+graph_arr, beta_arr = [], []
 
-for i in range(0, len(m), steps):
-    plt.plot(betas[i:i+steps], m[i:i+steps])
+for i in range(0, len(m)):
+    if 
+    graph_arr.append(np.mean(m[i:i+steps]))
+    beta_arr.append(np.mean(betas[i:i+steps]))
 
+plt.plot(beta_arr, graph_arr)
 plt.title('< m^2 > vs β')
 plt.xlabel('β')
 plt.ylabel('< m^2 >')
