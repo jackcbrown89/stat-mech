@@ -1,5 +1,3 @@
-// OFFICE HOURS: 3-4 THURSDAY
-//
 //  Monte Carlo Ising Model Simulator
 //  
 //
